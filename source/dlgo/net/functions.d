@@ -1,0 +1,2 @@
+module dlgo.net.functions;
+

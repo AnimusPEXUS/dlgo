@@ -1,0 +1,17 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/dlgo
+dlgo.so
+dlgo.dylib
+dlgo.dll
+dlgo.a
+dlgo.lib
+dlgo-test-*
+*.exe
+*.o
+*.obj
+*.lst
+*.a
+.ipynb_checkpoints/
