@@ -81,7 +81,6 @@ unittest
     }
 }
 
-// auto ipv4_re = ctRegex!(`(\d+)\.(\d+)\.(\d+)\.(\d+)`);
 IP parseIP(gstring s)
 {
     // TODO: add IPv4-mapped IPv6 support

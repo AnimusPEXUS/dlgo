@@ -117,7 +117,7 @@ void main()
                 );
             else
                 writefln(
-                    "%s => parse failed",
+                    "%s => parsing failed",
                     v,
                 );
         }
