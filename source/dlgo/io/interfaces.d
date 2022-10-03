@@ -2,7 +2,7 @@ module dlgo.io.interfaces;
 
 import std.typecons;
 
-import dlgo.builtin;
+import dlgo;
 import dlgo.errors;
 
 interface ByteReader

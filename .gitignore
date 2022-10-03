@@ -15,3 +15,5 @@ dlgo-test-*
 *.lst
 *.a
 .ipynb_checkpoints/
+/examples/*/lib*
+/examples/net_example_01/net_example_01

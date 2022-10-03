@@ -1,6 +1,6 @@
 module dlgo.errors;
 
-import dlgo.builtin;
+import dlgo;
 
 gerror newError(gstring text)
 {
