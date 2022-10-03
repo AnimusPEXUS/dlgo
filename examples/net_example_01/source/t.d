@@ -92,7 +92,7 @@ void main()
     }
 
     {
-        writeln("IP.parse");
+        writeln("parseIP");
         foreach (
             v; [
                 "1.2.3.4",
@@ -106,7 +106,7 @@ void main()
             ]
             )
         {
-            auto ip = IP.parse(v);
+            auto ip = parseIP(v);
             if (ip)
                 writefln(
                     "%s => %s (value: %s) (ints: %s)",
