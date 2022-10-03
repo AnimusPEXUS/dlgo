@@ -83,127 +83,6 @@ unittest
 
 // auto ipv4_re = ctRegex!(`(\d+)\.(\d+)\.(\d+)\.(\d+)`);
 
-IP parseIP(gstring s)
-{
-    if (s.length == 0)
-    {
-        return null;
-    }
-
-    {
-        auto ipv4_split_res = s.split('.');
-        // writeln("ipv4_split_res ", ipv4_split_res);
-        if (ipv4_split_res.length != 4)
-        {
-            goto try_ipv6_parse;
-        }
-
-        gbyte[] ret;
-        auto spc = singleSpec("%d");
-        foreach (v; ipv4_split_res)
-        {
-            gbyte t;
-            try
-            {
-                t = unformatValue!gbyte(v, spc);
-            }
-            catch (Exception e)
-            {
-                goto try_ipv6_parse;
-            }
-            ret ~= t;
-        }
-
-        IP ret2;
-        try
-        {
-            ret2 = new IP(ret);
-        }
-        catch (Exception e)
-        {
-            goto try_ipv6_parse;
-        }
-        return ret2;
-
-    }
-
-try_ipv6_parse:
-    {
-        if (s[0] == ':')
-        {
-            s = "0" ~ s;
-        }
-
-        if (s[$ - 1] == ':')
-        {
-            s = s ~ "0";
-        }
-
-        auto ipv6_split_res = s.split(':');
-        if (ipv6_split_res.length >= 3 && ipv6_split_res.length <= 8)
-        {
-
-            if (ipv6_split_res.canFind(""))
-            {
-
-                auto empty_index = ipv6_split_res.length
-                    - (ipv6_split_res.find("").length);
-
-                auto first_part = ipv6_split_res[0 .. empty_index];
-                auto last_part = ipv6_split_res[empty_index + 1 .. $];
-
-                byte missing_count =
-                    cast(byte)(8 - (first_part.length + last_part.length));
-
-                if (missing_count < 0)
-                    return null;
-
-                string[] ipv6_split_res_new;
-
-                ipv6_split_res_new ~= first_part;
-
-                for (auto i = 0; i != missing_count; i++)
-                {
-                    ipv6_split_res_new ~= "0";
-                }
-
-                ipv6_split_res_new ~= last_part;
-
-                ipv6_split_res = ipv6_split_res_new;
-            }
-
-            guint16[] ret;
-            auto spc = singleSpec("%x");
-            foreach (v; ipv6_split_res)
-            {
-                guint16 t;
-                try
-                {
-                    t = unformatValue!guint16(v, spc);
-                }
-                catch (Exception e)
-                {
-                    return null;
-                }
-                ret ~= t;
-            }
-
-            IP ret2;
-            try
-            {
-                ret2 = new IP(ret);
-            }
-            catch (Exception e)
-            {
-                return null;
-            }
-            return ret2;
-        }
-    }
-
-    return null;
-}
-
 class IP
 {
     // IPv6 value is always in bigendian
@@ -445,6 +324,129 @@ class IP
 
         throw new Exception("invalid data in IP instance");
     }
+
+    static IP parse(gstring s)
+    {
+        // TODO: add IPv4-mapped IPv6 support
+        if (s.length == 0)
+        {
+            return null;
+        }
+
+        {
+            auto ipv4_split_res = s.split('.');
+            // writeln("ipv4_split_res ", ipv4_split_res);
+            if (ipv4_split_res.length != 4)
+            {
+                goto try_ipv6_parse;
+            }
+
+            gbyte[] ret;
+            auto spc = singleSpec("%d");
+            foreach (v; ipv4_split_res)
+            {
+                gbyte t;
+                try
+                {
+                    t = unformatValue!gbyte(v, spc);
+                }
+                catch (Exception e)
+                {
+                    goto try_ipv6_parse;
+                }
+                ret ~= t;
+            }
+
+            IP ret2;
+            try
+            {
+                ret2 = new IP(ret);
+            }
+            catch (Exception e)
+            {
+                goto try_ipv6_parse;
+            }
+            return ret2;
+
+        }
+
+    try_ipv6_parse:
+        {
+            if (s[0] == ':')
+            {
+                s = "0" ~ s;
+            }
+
+            if (s[$ - 1] == ':')
+            {
+                s = s ~ "0";
+            }
+
+            auto ipv6_split_res = s.split(':');
+            if (ipv6_split_res.length >= 3 && ipv6_split_res.length <= 8)
+            {
+
+                if (ipv6_split_res.canFind(""))
+                {
+
+                    auto empty_index = ipv6_split_res.length
+                        - (ipv6_split_res.find("").length);
+
+                    auto first_part = ipv6_split_res[0 .. empty_index];
+                    auto last_part = ipv6_split_res[empty_index + 1 .. $];
+
+                    byte missing_count =
+                        cast(byte)(8 - (first_part.length + last_part.length));
+
+                    if (missing_count < 0)
+                        return null;
+
+                    string[] ipv6_split_res_new;
+
+                    ipv6_split_res_new ~= first_part;
+
+                    for (auto i = 0; i != missing_count; i++)
+                    {
+                        ipv6_split_res_new ~= "0";
+                    }
+
+                    ipv6_split_res_new ~= last_part;
+
+                    ipv6_split_res = ipv6_split_res_new;
+                }
+
+                guint16[] ret;
+                auto spc = singleSpec("%x");
+                foreach (v; ipv6_split_res)
+                {
+                    guint16 t;
+                    try
+                    {
+                        t = unformatValue!guint16(v, spc);
+                    }
+                    catch (Exception e)
+                    {
+                        return null;
+                    }
+                    ret ~= t;
+                }
+
+                IP ret2;
+                try
+                {
+                    ret2 = new IP(ret);
+                }
+                catch (Exception e)
+                {
+                    return null;
+                }
+                return ret2;
+            }
+        }
+
+        return null;
+    }
+
 }
 
 private string representIPv6guint16ArrayToString(
