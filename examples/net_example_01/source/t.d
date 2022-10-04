@@ -123,6 +123,49 @@ void main()
         }
     }
 
+    {
+        writeln("parseIPAddr");
+        foreach (
+            v; [
+                "1.2.3.4",
+                test_addr_str,
+                "::",
+                "::8",
+                ":8:",
+                "8::",
+                "8::8",
+                ":8:8",
+                "[::]",
+                "[::8]",
+                "[:8:]",
+                "[8::]",
+                "[8::8]",
+                "[:8:8]",
+                "[::%zone]",
+                "[::8%zone]",
+                "[:8:%zone]",
+                "[8::%zone]",
+                "[8::8%zone]",
+                "[:8:8%zone]",
+            ]
+            )
+        {
+            auto ip = parseIPAddr(v);
+            if (ip)
+                writefln(
+                    "%s => %s (zone: %s)",
+                    v,
+                    ip.toString(),
+                    (ip.zone == "" ? "<not set>" : ip.zone)
+                );
+            else
+                writefln(
+                    "%s => parsing failed",
+                    v,
+                );
+        }
+    }
+
     /*
     string host = "localhost";
     ushort port = 6060;

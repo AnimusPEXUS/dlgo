@@ -1,11 +1,11 @@
 module dlgo.net.Addr;
 
 import std.stdio;
+import std.exception;
 import std.socket;
 import std.format;
 import std.system;
 
-// import std.regex;
 import std.algorithm;
 import std.array;
 import std.conv;
@@ -123,7 +123,6 @@ IP parseIP(gstring s)
             goto try_ipv6_parse;
         }
         return ret2;
-
     }
 
 try_ipv6_parse:
@@ -201,6 +200,60 @@ try_ipv6_parse:
     }
 
     return null;
+}
+
+IPAddr parseIPAddr(gstring s)
+{
+    gstring ip;
+    gstring zone;
+
+    if (s.canFind(":"))
+    {
+        if (s.canFind("%"))
+        {
+            auto zone_split_res = s.findSplit("%");
+            ip = zone_split_res[0];
+            zone = zone_split_res[2];
+        }
+        else
+        {
+            ip = s;
+        }
+
+        static foreach (v; ["ip", "zone"])
+        {
+            mixin(
+                q{
+            while (%1$s.startsWith("["))
+            {
+                %1$s = %1$s[1 .. $];
+            }
+
+            while (%1$s.endsWith("]"))
+            {
+                %1$s = %1$s[0 .. $ - 1];
+            }
+                }.format(v)
+            );
+        }
+
+    }
+
+    IP ip_parsed;
+    try
+    {
+        ip_parsed = parseIP(ip);
+    }
+    catch (Exception e)
+    {
+        return null;
+    }
+
+    if (ip_parsed is null)
+        return null;
+
+    auto ret = new IPAddr(ip_parsed, zone);
+    return ret;
 }
 
 class IP
@@ -499,6 +552,7 @@ class IPAddr : Addr
 
     this(IP ip, gstring zone = "")
     {
+        enforce(ip !is null);
         this.ip = ip;
         this.zone = zone;
     }
@@ -535,7 +589,10 @@ class IPAddr : Addr
 
     invariant
     {
-        assert(zone != "" && ip.length() == 16);
+        if (zone != "")
+        {
+            assert(ip.length() == 16);
+        }
     }
 
     gstring network()
