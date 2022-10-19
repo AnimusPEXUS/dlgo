@@ -8,12 +8,13 @@ import std.system;
 
 import std.algorithm;
 import std.array;
+import std.range;
 import std.conv;
 import std.typecons;
 
 import dlgo;
 
-interface Addr
+interface AddrI
 {
     gstring network();
     gstring toString();
@@ -33,52 +34,6 @@ gbyte[2] swapBytes(gbyte[2] val)
     val[0] = val[1];
     val[1] = z;
     return val;
-}
-
-unittest
-{
-    writeln("unittest for IP");
-
-    {
-        auto t = cast(gbyte[])[192, 168, 0, 1];
-        auto ip = new IP(t);
-        assert(ip.toString() == "192.168.0.1");
-    }
-
-    {
-        auto bts_init = cast(gbyte[])[
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
-        ];
-        auto bts_init_guint16 = cast(guint16[])[
-            0x0102, 0x0304, 0x0506, 0x0708, 0x090a, 0xb0c, 0xd0e, 0x0f10
-        ];
-        auto bts_str_init = "102:304:506:708:90a:b0c:d0e:f10";
-
-        auto bts_init_ip = new IP(bts_init);
-        auto bts_init_ip_str = bts_init_ip.toString();
-
-        auto ip_addr = new Internet6Address(
-            bts_init[0 .. 16],
-            Internet6Address.PORT_ANY
-        );
-        auto ip_addr_control_result = "[%s]:0".format(bts_str_init);
-
-        assert(bts_init == ip_addr.addr());
-
-        assert(
-            ip_addr.toString() == ip_addr_control_result,
-            "%s != %s".format(ip_addr.toString(), ip_addr_control_result)
-        );
-
-        assert(bts_init_ip_str == bts_str_init);
-
-        bts_init_ip = new IP(bts_init_guint16);
-        bts_init_ip_str = bts_init_ip.toString();
-
-        assert(bts_init == ip_addr.addr());
-        assert(ip_addr.toString() == ip_addr_control_result);
-        assert(bts_init_ip_str == bts_str_init);
-    }
 }
 
 IP parseIP(gstring s)
@@ -220,23 +175,8 @@ IPAddr parseIPAddr(gstring s)
             ip = s;
         }
 
-        static foreach (v; ["ip", "zone"])
-        {
-            mixin(
-                q{
-            while (%1$s.startsWith("["))
-            {
-                %1$s = %1$s[1 .. $];
-            }
-
-            while (%1$s.endsWith("]"))
-            {
-                %1$s = %1$s[0 .. $ - 1];
-            }
-                }.format(v)
-            );
-        }
-
+        ip = ipRemoveBrackets(ip);
+        zone = ipRemoveBrackets(zone);
     }
 
     IP ip_parsed;
@@ -254,6 +194,163 @@ IPAddr parseIPAddr(gstring s)
 
     auto ret = new IPAddr(ip_parsed, zone);
     return ret;
+}
+
+gstring ipRemoveBrackets(string s)
+{
+    while (s.startsWith("["))
+    {
+        s = s[1 .. $];
+    }
+
+    while (s.endsWith("]"))
+    {
+        s = s[0 .. $ - 1];
+    }
+
+    return s;
+}
+
+gstring joinHostPort(gstring host, gstring port)
+{
+    // TODO: maybe add some checks
+    host = ipRemoveBrackets(host);
+    if (host.canFind(":"))
+    {
+        host = "[" ~ host ~ "]";
+    }
+    return host ~ ":" ~ port;
+}
+
+Tuple!(gstring, gstring) splitHostPort(gstring hostport)
+{
+    gstring host;
+    gstring port;
+
+    // auto port_column_search_res = retro(hostport).find(":");
+
+    int port_column_search_res = -1;
+    foreach_reverse (i, v; hostport)
+    {
+        if (v == ']')
+        {
+            host = hostport;
+            break;
+        }
+        if (v == ':')
+        {
+            port_column_search_res = cast(int) i;
+            break;
+        }
+    }
+
+    if (port_column_search_res == -1)
+    {
+        host = hostport;
+    }
+    else
+    {
+        host = hostport[0 .. port_column_search_res];
+        port = hostport[port_column_search_res + 1 .. $];
+    }
+
+    host = ipRemoveBrackets(host);
+
+    return tuple(host, port);
+}
+
+TCPAddr parseTCPAddr(gstring s)
+{
+    gstring ip;
+    guint16 port;
+
+    if (s.length == 0)
+        return null;
+
+    {
+        auto sm1 = s[$ - 1];
+        if (sm1 == ':' || sm1 == ']')
+        {
+            ip = s;
+            port = 0;
+            goto try_parse;
+        }
+    }
+
+    {
+        auto res = splitHostPort(s);
+        ip = res[0];
+        try
+        {
+            auto spc = singleSpec("%d");
+            port = unformatValue!guint16(
+                res[1],
+                spc
+            );
+        }
+        catch (Exception e)
+        {
+            goto try_parse;
+        }
+    }
+
+try_parse:
+    auto ret_ip = parseIPAddr(ip);
+    if (ret_ip is null)
+        return null;
+
+    return new TCPAddr(ret_ip, port);
+}
+
+UDPAddr parseUDPAddr(gstring s)
+{
+    return cast(UDPAddr) parseTCPAddr(s);
+}
+
+unittest
+{
+    writeln("unittest for IP");
+
+    {
+        auto t = cast(gbyte[])[192, 168, 0, 1];
+        auto ip = new IP(t);
+        assert(ip.toString() == "192.168.0.1");
+    }
+
+    {
+        auto bts_init = cast(gbyte[])[
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+        ];
+        auto bts_init_guint16 = cast(guint16[])[
+            0x0102, 0x0304, 0x0506, 0x0708, 0x090a, 0xb0c, 0xd0e, 0x0f10
+        ];
+        auto bts_str_init = "102:304:506:708:90a:b0c:d0e:f10";
+
+        auto bts_init_ip = new IP(bts_init);
+        auto bts_init_ip_str = bts_init_ip.toString();
+
+        auto ip_addr = new Internet6Address(
+            bts_init[0 .. 16],
+            Internet6Address.PORT_ANY
+        );
+        auto ip_addr_control_result = "[%s]:0".format(bts_str_init);
+
+        assert(bts_init == ip_addr.addr());
+
+        assert(
+            ip_addr.toString() == ip_addr_control_result,
+            "%s != %s".format(ip_addr.toString(), ip_addr_control_result)
+        );
+
+        assert(bts_init_ip_str == bts_str_init);
+
+        bts_init_ip = new IP(bts_init_guint16);
+        bts_init_ip_str = bts_init_ip.toString();
+
+        assert(bts_init == ip_addr.addr());
+        assert(ip_addr.toString() == ip_addr_control_result);
+        assert(bts_init_ip_str == bts_str_init);
+    }
 }
 
 class IP
@@ -544,7 +641,7 @@ unittest
     }
 }
 
-class IPAddr : Addr
+class IPAddr : AddrI
 {
 
     IP ip;
@@ -653,10 +750,10 @@ unittest
     }
 }
 
-class TCPAddr : Addr
+class TCPAddr : AddrI
 {
 
-    IPAddr ip_addr;
+    IPAddr ipaddr;
     ushort port; // TODO: fix type
 
     this(guint32 ip, ushort port = 0, string zone = "")
@@ -670,43 +767,43 @@ class TCPAddr : Addr
 
         auto t = ip4bytesunion(ip);
 
-        this.ip_addr = new IPAddr(t.ip_bytes, zone);
+        this.ipaddr = new IPAddr(t.ip_bytes, zone);
         this.port = port;
     }
 
     this(gbyte[16] ip, ushort port = 0, string zone = "")
     {
-        this.ip_addr = new IPAddr(ip, zone);
+        this.ipaddr = new IPAddr(ip, zone);
         this.port = port;
     }
 
     this(gbyte[4] ip, ushort port = 0, string zone = "")
     {
-        this.ip_addr = new IPAddr(ip, zone);
+        this.ipaddr = new IPAddr(ip, zone);
         this.port = port;
     }
 
     this(guint16[8] ip, ushort port = 0, string zone = "")
     {
-        this.ip_addr = new IPAddr(ip, zone);
+        this.ipaddr = new IPAddr(ip, zone);
         this.port = port;
     }
 
     this(IP ip, ushort port = 0, string zone = "")
     {
-        this.ip_addr = new IPAddr(ip, zone);
+        this.ipaddr = new IPAddr(ip, zone);
         this.port = port;
     }
 
-    this(IPAddr ip_addr, ushort port = 0)
+    this(IPAddr ipaddr, ushort port = 0)
     {
-        this.ip_addr = ip_addr;
+        this.ipaddr = ipaddr;
         this.port = port;
     }
 
     override gstring network()
     {
-        final switch (ip_addr.ip.length())
+        final switch (ipaddr.ip.length())
         {
         case 4:
             return "tcp4";
@@ -717,7 +814,7 @@ class TCPAddr : Addr
 
     override gstring toString()
     {
-        return ip_addr.toString() ~ ":%d".format(port);
+        return ipaddr.toString() ~ ":%d".format(port);
     }
 }
 
@@ -755,14 +852,14 @@ class UDPAddr : TCPAddr
         super(ip, port, zone);
     }
 
-    this(IPAddr ip_addr, ushort port = 0)
+    this(IPAddr ipaddr, ushort port = 0)
     {
-        super(ip_addr, port);
+        super(ipaddr, port);
     }
 
     override gstring network()
     {
-        final switch (ip_addr.ip.length())
+        final switch (ipaddr.ip.length())
         {
         case 4:
             return "udp4";
@@ -774,7 +871,7 @@ class UDPAddr : TCPAddr
     // alias toString = TCPAddr.toString;
 }
 
-class UNIXAddr : Addr
+class UNIXAddr : AddrI
 {
 
     string name;

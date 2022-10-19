@@ -15,5 +15,8 @@ dlgo-test-*
 *.lst
 *.a
 .ipynb_checkpoints/
+/dlgo-test-library
 /examples/*/lib*
 /examples/net_example_01/net_example_01
+/examples/chan_example_01/chan_example_01
+/examples/select_example_01/select_example_01

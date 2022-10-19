@@ -14,6 +14,6 @@ interface Listener
     // Any blocked Accept operations will be unblocked and return errors.
     gerror close();
 
-    // Addr returns the listener's network address.
-    Addr addr();
+    // AddrI returns the listener's network address.
+    AddrI addr();
 }

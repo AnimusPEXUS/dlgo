@@ -7,8 +7,8 @@ gerror newError(gstring text)
     return new Exception(text);
 }
 
-// mixin template errorCT(alias N, string MSG, alias P = Exception)
-mixin template errorCT(string N, string MSG, string P = "Exception")
+// mixin template newErrorCT(alias N, string MSG, alias P = Exception)
+mixin template newErrorCT(string N, string MSG, string P = "Exception")
 {
     import std.format;
 

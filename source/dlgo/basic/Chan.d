@@ -19,6 +19,11 @@ debug
     }
 }
 
+// interface ChanI
+// {
+
+// }
+
 class Chan(T)
 {
     private

@@ -9,6 +9,44 @@ import dlgo.net;
 void main()
 {
 
+    string[] parsing_samples_string =
+        [
+            "2001:0db8:0c10:fe01::",
+            "1.2.3.4",
+            "::",
+            "::8",
+            ":8:",
+            "8::",
+            "8::8",
+            ":8:8",
+            "[::]",
+            "[::8]",
+            "[:8:]",
+            "[8::]",
+            "[8::8]",
+            "[:8:8]",
+            "[::%zone]",
+            "[::8%zone]",
+            "[:8:%zone]",
+            "[8::%zone]",
+            "[8::8%zone]",
+            "[:8:8%zone]",
+            ":333",
+            "[2001:0db8:0c10:fe01::]:333",
+            "[::]:333",
+            "[::8]:333",
+            "[:8:]:333",
+            "[8::]:333",
+            "[8::8]:333",
+            "[:8:8]:333",
+            "[::%zone]:333",
+            "[::8%zone]:333",
+            "[:8:%zone]:333",
+            "[8::%zone]:333",
+            "[8::8%zone]:333",
+            "[:8:8%zone]:333",
+        ];
+
     // testing addr parsing and endianness
     const string test_addr_str = "2001:0db8:0c10:fe01::";
     const auto test_addr_int =
@@ -94,22 +132,13 @@ void main()
     {
         writeln("parseIP");
         foreach (
-            v; [
-                "1.2.3.4",
-                test_addr_str,
-                "::",
-                "::8",
-                ":8:",
-                "8::",
-                "8::8",
-                ":8:8",
-            ]
+            v; parsing_samples_string
             )
         {
             auto ip = parseIP(v);
             if (ip)
                 writefln(
-                    "%s => %s (value: %s) (ints: %s)",
+                    "   %s => %s (value: %s) (ints: %s)",
                     v,
                     ip.toString(),
                     ip.value,
@@ -117,7 +146,7 @@ void main()
                 );
             else
                 writefln(
-                    "%s => parsing failed",
+                    "   %s => parsing failed",
                     v,
                 );
         }
@@ -126,43 +155,60 @@ void main()
     {
         writeln("parseIPAddr");
         foreach (
-            v; [
-                "1.2.3.4",
-                test_addr_str,
-                "::",
-                "::8",
-                ":8:",
-                "8::",
-                "8::8",
-                ":8:8",
-                "[::]",
-                "[::8]",
-                "[:8:]",
-                "[8::]",
-                "[8::8]",
-                "[:8:8]",
-                "[::%zone]",
-                "[::8%zone]",
-                "[:8:%zone]",
-                "[8::%zone]",
-                "[8::8%zone]",
-                "[:8:8%zone]",
-            ]
+            v; parsing_samples_string
             )
         {
             auto ip = parseIPAddr(v);
             if (ip)
                 writefln(
-                    "%s => %s (zone: %s)",
+                    "   %s => %s (zone: %s)",
                     v,
                     ip.toString(),
                     (ip.zone == "" ? "<not set>" : ip.zone)
                 );
             else
                 writefln(
-                    "%s => parsing failed",
+                    "   %s => parsing failed",
                     v,
                 );
+        }
+    }
+
+    {
+        writeln("parseIPAddr");
+        foreach (
+            v; parsing_samples_string
+            )
+        {
+            auto ip = parseTCPAddr(v);
+            if (ip)
+                writefln(
+                    "   %s => %s : %s",
+                    v,
+                    ip.toString(),
+                    ip.port
+                );
+            else
+                writefln(
+                    "   %s => parsing failed",
+                    v,
+                );
+        }
+    }
+
+    {
+        writeln("splitHostPort");
+        foreach (
+            v; parsing_samples_string
+            )
+        {
+            auto ip = splitHostPort(v);
+            writefln(
+                "   %s => host: %s ; port: %s",
+                v,
+                ip[0],
+                ip[1]
+            );
         }
     }
 

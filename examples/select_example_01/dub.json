@@ -4,10 +4,10 @@
 	],
 	"copyright": "Copyright © 2022, Animus Pexus",
 	"dependencies": {
-		"observable": "~>1.1.1"
+		"dlgo": ">=0.0.0"
 	},
 	"description": "A minimal D application.",
 	"license": "gplv3+",
-	"name": "dlgo",
-	"targetType": "staticLibrary"
+	"name": "select_example_01",
+	"targetType": "executable"
 }

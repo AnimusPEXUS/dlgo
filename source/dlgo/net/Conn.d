@@ -17,8 +17,8 @@ interface Conn : ReadWriteCloser
 
     //     gerror close();
 
-    Addr localAddr();
-    Addr remoteAddr();
+    AddrI localAddr();
+    AddrI remoteAddr();
 
     gerror setDeadline(DateTime t);
     gerror setReadDeadline(DateTime t);
@@ -37,7 +37,7 @@ interface Conn : ReadWriteCloser
 
 // alias IPAddr = 
 
-// interface Addr {
+// interface AddrI {
 //     gstring network();
 //     gstring toString();
 // }
@@ -95,7 +95,7 @@ class SocketConn : Conn
         return tuple(count, cast(gerror) null);
     }
 
-    Addr localAddr()
+    AddrI localAddr()
     {
         auto gAddr = convertAddressToAddr(s.localAddress());
         if (gAddr[1]!is null)
@@ -105,7 +105,7 @@ class SocketConn : Conn
         return gAddr[0];
     }
 
-    Addr remoteAddr()
+    AddrI remoteAddr()
     {
         auto gAddr = convertAddressToAddr(s.remoteAddress());
         if (gAddr[1]!is null)

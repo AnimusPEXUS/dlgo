@@ -4,6 +4,8 @@ module dlgo.builtin;
 
 alias gerror = Exception;
 
+alias gbool = bool;
+
 alias gfloat32 = float;
 alias gfloat64 = double;
 alias gint16 = short;
@@ -33,7 +35,3 @@ else
 {
     static assert(false, "version not supported");
 }
-
-
-
-

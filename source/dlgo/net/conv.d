@@ -6,13 +6,13 @@ import std.socket;
 import dlgo;
 import dlgo.net;
 
-Tuple!(Addr, gerror) convertAddressToAddr(Address a)
+Tuple!(AddrI, gerror) convertAddressToAddr(Address a)
 {
     switch (a.addressFamily())
     {
     default:
         return tuple(
-            cast(Addr) null,
+            cast(AddrI) null,
             new Exception("conversion not supported")
         );
     case AddressFamily.UNIX:
@@ -20,7 +20,7 @@ Tuple!(Addr, gerror) convertAddressToAddr(Address a)
         if (t is null)
         {
             return tuple(
-                cast(Addr) null,
+                cast(AddrI) null,
                 new Exception(
                     "couldn't cast AddressFamily.UNIX Address to UnixAddress"
             )
@@ -32,7 +32,7 @@ Tuple!(Addr, gerror) convertAddressToAddr(Address a)
         if (t is null)
         {
             return tuple(
-                cast(Addr) null,
+                cast(AddrI) null,
                 new Exception(
                     "couldn't cast AddressFamily.INET Address to InternetAddress"
             )
@@ -44,7 +44,7 @@ Tuple!(Addr, gerror) convertAddressToAddr(Address a)
         if (t is null)
         {
             return tuple(
-                cast(Addr) null,
+                cast(AddrI) null,
                 new Exception(
                     "couldn't cast AddressFamily.INET6 Address to Internet6Address"
             )
@@ -55,17 +55,17 @@ Tuple!(Addr, gerror) convertAddressToAddr(Address a)
 
 }
 
-Addr convertAddressToAddr(InternetAddress a)
+AddrI convertAddressToAddr(InternetAddress a)
 {
     return new TCPAddr(a.addr, a.port);
 }
 
-Addr convertAddressToAddr(Internet6Address a)
+AddrI convertAddressToAddr(Internet6Address a)
 {
     return new TCPAddr(a.addr, a.port);
 }
 
-Addr convertAddressToAddr(UnixAddress a)
+AddrI convertAddressToAddr(UnixAddress a)
 {
     return new UNIXAddr(a.path, "unix");
 }
