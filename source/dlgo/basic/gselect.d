@@ -119,12 +119,13 @@ do
                 bool pull_cb_delegate_success;
                 typeof(v.chan.pool[0]) pull_cb_delegate_result;
                 auto signal_cb_delegate = delegate bool(
-                    ChanPullCBValue!(typeof(v.chan.pool[0]))* cb_value
+                    ChanPullCBResult res,
+                    typeof(v.chan.pool[0]) cb_value
                 ) {
-                    if (cb_value.success)
+                    if (res == ChanPullCBResult.success)
                     {
                         pull_cb_delegate_success = true;
-                        pull_cb_delegate_result = cb_value.value;
+                        pull_cb_delegate_result = cb_value;
                     }
                     return true;
                 };

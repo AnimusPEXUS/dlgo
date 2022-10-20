@@ -13,16 +13,14 @@ void main()
 
     {
         auto res = c.put(123);
-        writeln("put res: ", *res);
+        writeln("put res: ", res);
     }
 
     {
-        ChanPullCBValue!int* cb_res;
 
         auto res = c.pull(
-            delegate bool(ChanPullCBValue!int* cb_res2) {
-            cb_res = cb_res2;
-            writeln("cb_res2: ", *cb_res2);
+            delegate bool(ChanPullCBResult res, int value) {
+            writeln("res: ", res, ", value: ", value);
             return false;
         }
         );
@@ -31,12 +29,10 @@ void main()
     }
 
     {
-        ChanPullCBValue!int* cb_res;
 
         auto res = c.pull(
-            delegate bool(ChanPullCBValue!int* cb_res2) {
-            cb_res = cb_res2;
-            writeln("cb_res2: ", *cb_res2);
+            delegate bool(ChanPullCBResult res, int value) {
+            writeln("res: ", res, ", value: ", value);
             return true;
         }
         );
@@ -45,12 +41,10 @@ void main()
     }
 
     {
-        ChanPullCBValue!int* cb_res;
 
         auto res = c.pull(
-            delegate bool(ChanPullCBValue!int* cb_res2) {
-            cb_res = cb_res2;
-            writeln("cb_res2: ", *cb_res2);
+            delegate bool(ChanPullCBResult res, int value) {
+            writeln("res: ", res, ", value: ", value);
             return true;
         }
         );

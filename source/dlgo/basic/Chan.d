@@ -5,6 +5,7 @@ import dlgo;
 import observable.signal;
 
 import std.stdio;
+import std.typecons;
 import std.format;
 import std.datetime;
 
@@ -13,37 +14,21 @@ import core.sync.mutex;
 import core.sync.condition;
 import core.sync.semaphore;
 
-struct ChanPutResult
+enum ChanPutResult : ubyte
 {
-    gbool success;
-    gbool full;
-    gerror error;
-
-    string toString()
-    {
-        return "success: %s, full: %s, error: %s".format(
-            success,
-            full,
-            error
-        );
-    }
+    success,
+    full,
+    shuttingdown,
+    closed,
+    exception
 }
 
-struct ChanPullCBValue(T)
+enum ChanPullCBResult : ubyte
 {
-    gbool success;
-    gbool empty;
-    T value;
-    // gerror error;
-
-    string toString()
-    {
-        return "success: %s, empty: %s, value: %s".format(
-            success,
-            empty,
-            value
-        );
-    }
+    success,
+    empty,
+    closed,
+    exception
 }
 
 class Chan(T)
@@ -54,12 +39,25 @@ class Chan(T)
     // this is signalled if some some items to get appeared
     Signal!() signal_not_full;
 
+    // this is called once Chan state is changed to closed
+    Signal!() signal_closed;
+
+    // this is called once Chan state is changed to closed
+    Signal!() signal_shuttingdown;
+
     T[] pool;
 
     // default capacity is endless
     uint capacity;
 
     Mutex pool_mut;
+
+    // true if Chan is closed
+    private bool closed;
+
+    // true if Chan should not longer accept pushes and will be closed
+    // once pool is empty
+    private bool shuttingdown;
 
     this()
     {
@@ -69,6 +67,26 @@ class Chan(T)
     this(uint capacity)
     {
         this.capacity = capacity;
+    }
+
+    bool isShuttingdown()
+    {
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+        return shuttingdown;
+    }
+
+    bool isClosed()
+    {
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+        return closed;
     }
 
     bool isFull()
@@ -93,13 +111,23 @@ class Chan(T)
         return pool.length == capacity;
     }
 
-    ChanPutResult* put(T value)
+    Tuple!(ChanPutResult, gerror) put(T value)
     {
-        auto ret = new ChanPutResult();
+        // auto ret = ChanPutResult.other;
         pool_mut.lock();
         scope (exit)
         {
             pool_mut.unlock();
+        }
+
+        if (shuttingdown)
+        {
+            return tuple(ChanPutResult.shuttingdown, cast(Exception) null);
+        }
+
+        if (closed)
+        {
+            return tuple(ChanPutResult.closed, cast(Exception) null);
         }
 
         try
@@ -108,28 +136,26 @@ class Chan(T)
 
             if (isFull())
             {
-                ret.full = true;
-                return ret;
+                return tuple(ChanPutResult.full, cast(Exception) null);
             }
             else
             {
                 pool ~= value;
-                ret.success = true;
                 if (emit_signal_not_empty)
                     signal_not_empty.emit();
-                return ret;
+                return tuple(ChanPutResult.success, cast(Exception) null);
             }
         }
         catch (gerror e)
         {
-            ret.success = false;
-            ret.error = e;
-            return ret;
+            // ret.success = false;
+            // ret.error = e;
+            return tuple(ChanPutResult.exception, e);
         }
     }
 
     gerror pull(
-        bool delegate(ChanPullCBValue!T* cb_value) cb
+        bool delegate(ChanPullCBResult res, T cb_value) cb
     )
     {
         pool_mut.lock();
@@ -138,26 +164,31 @@ class Chan(T)
             pool_mut.unlock();
         }
 
+        if (closed)
+        {
+            cb(ChanPullCBResult.closed, T.init);
+            return null;
+        }
+
         try
         {
-            auto cb_value = new ChanPullCBValue!T;
             bool emit_signal_not_full = isFull();
 
             if (isEmpty())
             {
-                // cb_value.success=false;
-                cb_value.empty = true;
-                cb(cb_value);
+                cb(ChanPullCBResult.empty, T.init);
                 return null;
             }
             else
             {
-                cb_value.success = true;
-                cb_value.value = pool[0];
-                auto cb_res = cb(cb_value);
+                auto cb_res = cb(ChanPullCBResult.success, pool[0]);
                 if (cb_res)
                 {
                     pool = pool[1 .. $];
+                    if (shuttingdown && isEmpty())
+                    {
+                        this.close();
+                    }
                     if (emit_signal_not_full)
                     {
                         signal_not_full.emit();
@@ -170,5 +201,28 @@ class Chan(T)
         {
             return e;
         }
+    }
+
+    void shutdown()
+    {
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+        shuttingdown = true;
+        signal_shuttingdown.emit();
+    }
+
+    void close()
+    {
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+        closed = true;
+        shuttingdown = false;
+        signal_closed.emit();
     }
 }
