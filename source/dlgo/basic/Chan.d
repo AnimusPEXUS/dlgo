@@ -203,6 +203,8 @@ class Chan(T)
         }
     }
 
+    // puts Chan in `shuttingdown` mode: push returns error. pull works until
+    // pool is empty, and once pool becomes empty - Chan becomes closed.
     void shutdown()
     {
         pool_mut.lock();
@@ -214,6 +216,8 @@ class Chan(T)
         signal_shuttingdown.emit();
     }
 
+    // puts Chan into `closed` mode: push/pull returns error, 
+    // `shuttingdown` mode becomes 'false', pool.length reset to 0.
     void close()
     {
         pool_mut.lock();
@@ -223,6 +227,7 @@ class Chan(T)
         }
         closed = true;
         shuttingdown = false;
+        pool.length = 0;
         signal_closed.emit();
     }
 }
