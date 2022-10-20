@@ -17,7 +17,7 @@ struct gcase(T)
 {
     T* var;
     string mode;
-    Chan_exp02!T chan;
+    Chan!T chan;
     void function() code;
 
     invariant
@@ -25,7 +25,7 @@ struct gcase(T)
         assert(mode == "<-" || mode == "->");
     }
 
-    this(T* var, string mode, Chan_exp02!T chan, void function() code)
+    this(T* var, string mode, Chan!T chan, void function() code)
     {
         this.var = var;
         this.mode = mode;

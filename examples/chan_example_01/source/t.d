@@ -7,7 +7,7 @@ import dlgo;
 
 void main()
 {
-    auto c = new Chan_exp02!int();
+    auto c = new Chan!int();
 
     writeln("capacity: ", c.capacity);
 

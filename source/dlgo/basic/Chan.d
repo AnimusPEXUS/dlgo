@@ -1,172 +1,174 @@
 module dlgo.basic.Chan;
 
+import dlgo;
+
+import observable.signal;
+
 import std.stdio;
 import std.format;
+import std.datetime;
 
 import core.atomic;
 import core.sync.mutex;
 import core.sync.condition;
 import core.sync.semaphore;
 
-debug
+struct ChanPutResult
 {
-    void prt(string s)
+    gbool success;
+    gbool full;
+    gerror error;
+
+    string toString()
     {
-        synchronized
-        {
-            writeln(s);
-        }
+        return "success: %s, full: %s, error: %s".format(
+            success,
+            full,
+            error
+        );
     }
 }
 
-// interface ChanI
-// {
+struct ChanPullCBValue(T)
+{
+    gbool success;
+    gbool empty;
+    T value;
+    // gerror error;
 
-// }
+    string toString()
+    {
+        return "success: %s, empty: %s, value: %s".format(
+            success,
+            empty,
+            value
+        );
+    }
+}
 
 class Chan(T)
 {
-    private
-    {
-        T[] pool;
-        Mutex pool_mx;
-        Mutex push_mx;
-        Mutex pull_mx;
+    // this is signalled if some space to put values appeared
+    Signal!() signal_not_empty;
 
-        Condition cond;
-        Mutex cond_mx;
+    // this is signalled if some some items to get appeared
+    Signal!() signal_not_full;
 
-        bool waiting;
+    T[] pool;
 
-        int pull_counter;
-    }
+    // default capacity is endless
+    uint capacity;
+
+    Mutex pool_mut;
 
     this()
     {
-        cond_mx = new Mutex();
-        cond = new Condition(cond_mx);
-
-        pool_mx = new Mutex();
-        push_mx = new Mutex();
-        pull_mx = new Mutex();
+        pool_mut = new Mutex;
     }
 
-    void push(T value) shared
+    this(uint capacity)
     {
-        synchronized (push_mx)
+        this.capacity = capacity;
+    }
+
+    bool isFull()
+    {
+        pool_mut.lock();
+        scope (exit)
         {
-            prt("push --> (start)");
-            scope (exit)
-                prt("push <-- (exit)");
-            synchronized (pool_mx)
+            pool_mut.unlock();
+        }
+        if (capacity == 0)
+            return false;
+        return pool.length >= capacity;
+    }
+
+    bool isEmpty()
+    {
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+        return pool.length == capacity;
+    }
+
+    ChanPutResult* put(T value)
+    {
+        auto ret = new ChanPutResult();
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+
+        try
+        {
+            bool emit_signal_not_empty = isEmpty();
+
+            if (isFull())
+            {
+                ret.full = true;
+                return ret;
+            }
+            else
             {
                 pool ~= value;
-                prt("   cond.notify()");
-                cond.notify();
+                ret.success = true;
+                if (emit_signal_not_empty)
+                    signal_not_empty.emit();
+                return ret;
             }
         }
-    }
-
-    T pull() shared
-    {
-        synchronized (pull_mx)
+        catch (gerror e)
         {
-            {
-                prt("pull <-- (exit %d)".format(pull_counter));
-                atomicOp!"+="(this.pull_counter, 1);
-            }
-            T ret;
-
-            while (pool.length == 0)
-            {
-                prt("   cond.wait()");
-
-                synchronized (cond_mx)
-                {
-                    cond.wait();
-                }
-
-                prt("   cond.wait() exited");
-            }
-
-            synchronized (pool_mx)
-            {
-                auto pl = pool.length;
-
-                ret = pool[0];
-
-                if (pl == 1)
-                    pool = pool[0 .. 0];
-                else
-                    pool = pool[1 .. $];
-            }
-
+            ret.success = false;
+            ret.error = e;
             return ret;
         }
     }
 
+    gerror pull(
+        bool delegate(ChanPullCBValue!T* cb_value) cb
+    )
+    {
+        pool_mut.lock();
+        scope (exit)
+        {
+            pool_mut.unlock();
+        }
+
+        try
+        {
+            auto cb_value = new ChanPullCBValue!T;
+            bool emit_signal_not_full = isFull();
+
+            if (isEmpty())
+            {
+                // cb_value.success=false;
+                cb_value.empty = true;
+                cb(cb_value);
+                return null;
+            }
+            else
+            {
+                cb_value.success = true;
+                cb_value.value = pool[0];
+                auto cb_res = cb(cb_value);
+                if (cb_res)
+                {
+                    pool = pool[1 .. $];
+                    if (emit_signal_not_full)
+                    {
+                        signal_not_full.emit();
+                    }
+                }
+                return null;
+            }
+        }
+        catch (gerror e)
+        {
+            return e;
+        }
+    }
 }
-
-// class Channel(T)
-// {
-//     private
-//     {
-//         T[] pool;
-//         bool unavailable;
-//         Mutex pool_mx;
-
-//         Condition cond;
-//         Mutex cond_mx;
-
-//         Mutex pull_mx;
-//     }
-
-//     this()
-//     {
-//         pool_mx = new Mutex();
-//         cond_mx = new Mutex();
-//         cond = new Condition(cond_mx);
-//         pull_mx = new Mutex();
-//     }
-
-//     void push(T value)
-//     {
-//         synchronized (pool_mx)
-//         {
-//             pool ~= value;
-//             cond.notify();
-//         }
-//     }
-
-//     T pull()
-//     {
-//         synchronized (pull_mx)
-//         {
-//             T ret;
-
-//             synchronized (pool_mx) {
-//                 if (pool.length == 0)
-//                 {
-//                     cond_mx.lock();
-//                     unavailable=true;
-//                 }
-//             }
-
-//             if (unavailable)
-//             {
-//                 cond.wait();
-//             }
-
-//             synchronized (pool_mx)
-//             {
-//                 if (pool.length != 0)
-//                 {
-//                     ret = pool[0];
-//                     pool = pool[1 .. $];
-//                 }
-
-//                 return ret;
-//             }
-//         }
-//     }
-// }

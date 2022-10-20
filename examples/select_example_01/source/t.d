@@ -3,14 +3,14 @@ module main;
 import core.thread;
 import std.parallelism;
 import std.stdio;
-import std.socket;
+// import std.socket;
 import std.datetime;
 
 import dlgo;
 
 void _timer(
     Duration d,
-    Chan_exp02!bool c
+    Chan!bool c
 )
 {
     assert(c !is null);
@@ -21,10 +21,10 @@ void _timer(
     }
 }
 
-Chan_exp02!bool timer(Duration d)
+Chan!bool timer(Duration d)
 {
-    Chan_exp02!bool c;
-    c = new Chan_exp02!bool();
+    Chan!bool c;
+    c = new Chan!bool();
     auto t = task!_timer(d, c);
     t.executeInNewThread();
     assert(c !is null);
