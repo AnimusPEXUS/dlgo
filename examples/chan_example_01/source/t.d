@@ -12,8 +12,8 @@ void main()
     writeln("capacity: ", c.capacity);
 
     {
-        auto res = c.put(123);
-        writeln("put res: ", res);
+        auto res = c.push(123);
+        writeln("push res: ", res);
     }
 
     {

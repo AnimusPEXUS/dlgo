@@ -17,7 +17,7 @@ void _timer(
     while (true)
     {
         Thread.sleep(d);
-        c.put(false);
+        c.push(false);
     }
 }
 

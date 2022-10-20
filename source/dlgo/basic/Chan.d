@@ -111,7 +111,7 @@ class Chan(T)
         return pool.length == capacity;
     }
 
-    Tuple!(ChanPutResult, gerror) put(T value)
+    Tuple!(ChanPutResult, gerror) push(T value)
     {
         // auto ret = ChanPutResult.other;
         pool_mut.lock();
