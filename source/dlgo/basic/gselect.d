@@ -71,7 +71,13 @@ do
         mixin(
             q{
                 SignalConnection sc%1$d;         
+            }.format(i)
+        );
 
+        if (v.mode == "<-")
+        {
+            mixin(
+                q{
                 v.chan.signal_not_empty.socket.connect(
                     sc%1$d,
                     delegate void() nothrow
@@ -93,7 +99,39 @@ do
                     }
                 );          
             }.format(i)
-        );
+            );
+        }
+        else if (v.mode == "->")
+        {
+            mixin(
+                q{
+                v.chan.signal_not_full.socket.connect(
+                    sc%1$d,
+                    delegate void() nothrow
+                    {
+                        try {
+                        synchronized(signal_waiting_synchronization_lock)
+                        {
+                            if (signal_recvd)
+                                return;
+                            signal_recvd = true;
+                            signalled_case = %1$d;
+                            signal_waiting_cond.notify();
+                        }
+                        } catch (Exception e)
+                        {
+                            collectException(writeln("exception: ", e));
+                            signalException = e;
+                        }
+                    }
+                );          
+            }.format(i)
+            );
+        }
+        else
+        {
+            assert(false, "invalid mode");
+        }
     }
 
     scope (exit)
