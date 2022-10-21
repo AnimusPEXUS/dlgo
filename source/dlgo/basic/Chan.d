@@ -14,7 +14,7 @@ import core.sync.mutex;
 import core.sync.condition;
 import core.sync.semaphore;
 
-enum ChanPutResult : ubyte
+enum ChanPushResult : ubyte
 {
     success,
     full,
@@ -111,9 +111,9 @@ class Chan(T)
         return pool.length == capacity;
     }
 
-    Tuple!(ChanPutResult, gerror) push(T value)
+    Tuple!(ChanPushResult, gerror) push(T value)
     {
-        // auto ret = ChanPutResult.other;
+        // auto ret = ChanPushResult.other;
         pool_mut.lock();
         scope (exit)
         {
@@ -122,12 +122,12 @@ class Chan(T)
 
         if (shuttingdown)
         {
-            return tuple(ChanPutResult.shuttingdown, cast(Exception) null);
+            return tuple(ChanPushResult.shuttingdown, cast(Exception) null);
         }
 
         if (closed)
         {
-            return tuple(ChanPutResult.closed, cast(Exception) null);
+            return tuple(ChanPushResult.closed, cast(Exception) null);
         }
 
         try
@@ -136,21 +136,21 @@ class Chan(T)
 
             if (isFull())
             {
-                return tuple(ChanPutResult.full, cast(Exception) null);
+                return tuple(ChanPushResult.full, cast(Exception) null);
             }
             else
             {
                 pool ~= value;
                 if (emit_signal_not_empty)
                     signal_not_empty.emit();
-                return tuple(ChanPutResult.success, cast(Exception) null);
+                return tuple(ChanPushResult.success, cast(Exception) null);
             }
         }
         catch (gerror e)
         {
             // ret.success = false;
             // ret.error = e;
-            return tuple(ChanPutResult.exception, e);
+            return tuple(ChanPushResult.exception, e);
         }
     }
 

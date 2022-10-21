@@ -136,18 +136,25 @@ do
                     v.code();
                     return;
                 }
-                if (signal_waiting_mode)
-                    goto signal_waiting_mode_label;
             }
         }
         else if (v.mode == "->")
         {
-            writeln("todo: push behavior");
+            {
+                auto push_res = v.chan.push(*(v.var))[0];
+                if (push_res == ChanPushResult.success)
+                {
+                    return;
+                }
+            }
         }
         else
         {
             assert(false, "invalid mode");
         }
+
+        if (signal_waiting_mode)
+            goto signal_waiting_mode_label;
     }
 
     signal_waiting_mode = true;
