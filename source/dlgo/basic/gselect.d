@@ -66,6 +66,8 @@ do
 
     Exception signalException;
 
+    bool select_terminated;
+
     static foreach (i, v; args)
     {
         mixin(
@@ -85,6 +87,8 @@ do
                         try {
                         synchronized(signal_waiting_synchronization_lock)
                         {
+                            if (select_terminated)
+                                return;
                             if (signal_recvd)
                                 return;
                             signal_recvd = true;
@@ -112,6 +116,8 @@ do
                         try {
                         synchronized(signal_waiting_synchronization_lock)
                         {
+                            if (select_terminated)
+                                return;
                             if (signal_recvd)
                                 return;
                             signal_recvd = true;
@@ -136,14 +142,10 @@ do
 
     scope (exit)
     {
+        select_terminated = true;
         static foreach (i, v; args)
         {
-            mixin(
-                q{
-                sc%1$d.disconnect();         
-            }.format(i)
-            );
-
+            mixin(q{ sc%1$d.disconnect(); }.format(i));
         }
     }
 
@@ -172,6 +174,7 @@ do
                 {
                     *(v.var) = pull_cb_delegate_result;
                     v.code();
+                    select_terminated = true;
                     return;
                 }
             }
@@ -182,6 +185,7 @@ do
                 auto push_res = v.chan.push(*(v.var))[0];
                 if (push_res == ChanPushResult.success)
                 {
+                    select_terminated = true;
                     return;
                 }
             }
@@ -197,7 +201,12 @@ do
 
     signal_waiting_mode = true;
 
-    signal_waiting_mode_label: synchronized (
+signal_waiting_mode_label:
+
+    if (select_terminated)
+        return;
+
+    synchronized (
         signal_waiting_synchronization_lock
         )
     {
