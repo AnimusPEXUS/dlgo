@@ -9,5 +9,6 @@
 	"description": "A minimal D application.",
 	"license": "gplv3+",
 	"name": "dlgo",
-	"targetType": "staticLibrary"
+	"targetType": "staticLibrary",
+	"version": "0.1.0"
 }
