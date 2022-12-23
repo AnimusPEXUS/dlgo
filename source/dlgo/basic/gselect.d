@@ -35,16 +35,14 @@ struct gcase(T)
 }
 
 void gselect(Args...)(Args args)
-        if (
-            () {
+        if (() {
                 foreach (i, v; Args)
                 {
                     if (!__traits(isSame, TemplateOf!(v), gcase))
                         return false;
                 }
                 return true;
-            }()
-)
+            }())
 in
 {
     foreach (v; args)
@@ -70,16 +68,13 @@ do
 
     static foreach (i, v; args)
     {
-        mixin(
-            q{
+        mixin(q{
                 SignalConnection sc%1$d;         
-            }.format(i)
-        );
+            }.format(i));
 
         if (v.mode == "<-")
         {
-            mixin(
-                q{
+            mixin(q{
                 v.chan.signal_not_empty.socket.connect(
                     sc%1$d,
                     delegate void() nothrow
@@ -102,13 +97,11 @@ do
                         }
                     }
                 );          
-            }.format(i)
-            );
+            }.format(i));
         }
         else if (v.mode == "->")
         {
-            mixin(
-                q{
+            mixin(q{
                 v.chan.signal_not_full.socket.connect(
                     sc%1$d,
                     delegate void() nothrow
@@ -131,8 +124,7 @@ do
                         }
                     }
                 );          
-            }.format(i)
-            );
+            }.format(i));
         }
         else
         {
@@ -158,10 +150,8 @@ do
             {
                 bool pull_cb_delegate_success;
                 typeof(v.chan.pool[0]) pull_cb_delegate_result;
-                auto signal_cb_delegate = delegate bool(
-                    ChanPullCBResult res,
-                    typeof(v.chan.pool[0]) cb_value
-                ) {
+                auto signal_cb_delegate = delegate bool(ChanPullCBResult res,
+                        typeof(v.chan.pool[0]) cb_value) {
                     if (res == ChanPullCBResult.success)
                     {
                         pull_cb_delegate_success = true;
@@ -206,13 +196,10 @@ signal_waiting_mode_label:
     if (select_terminated)
         return;
 
-    synchronized (
-        signal_waiting_synchronization_lock
-        )
+    synchronized (signal_waiting_synchronization_lock)
     {
         signal_waiting_cond.wait();
-        mixin(
-            () {
+        mixin(() {
             auto ret = "";
             ret ~= "switch (signalled_case) {";
             for (int i = 0; i != args.length; i++)
@@ -222,7 +209,6 @@ signal_waiting_mode_label:
             ret ~= `default: throw new Exception("programming error");`;
             ret ~= "}";
             return ret;
-        }()
-        );
+        }());
     }
 }
